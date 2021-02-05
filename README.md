@@ -1,4 +1,4 @@
-# WebCheck
+# WebLint
 
 Extends Scrapy to provide a test suite for a website.
 
