@@ -7,10 +7,14 @@ from scrapy.exceptions import UsageError
 
 class Command(RunSpiderCommand):
     requires_project = False
-    default_settings = {"SPIDER_LOADER_WARN_ONLY": True}
+    default_settings = {
+        "SPIDER_LOADER_WARN_ONLY": True,
+        "OPENGRAPH": False,
+        "DISQUS": False,
+    }
 
     def syntax(self):
-        return "[options] <spider_file>"
+        return "[options] <url>"
 
     def short_desc(self):
         return "Run a self-contained spider (without creating a project)"
@@ -22,9 +26,15 @@ class Command(RunSpiderCommand):
         if len(args) != 1:
             raise UsageError("Please pass one website URL as argument")
         site = args[0]
-
+        print(dict(self.settings))
         crawler = Crawler(Spider)
-        self.crawler_process.crawl(crawler, site=site, **opts.spargs)
+        self.crawler_process.crawl(
+            crawler,
+            site=site,
+            opengraph=self.settings["OPENGRAPH"],
+            disqus=self.settings["DISQUS"],
+            **opts.spargs,
+        )
         self.crawler_process.start()
 
         if self.crawler_process.bootstrap_failed:
@@ -42,10 +52,12 @@ class Spider(scrapy.Spider):
     name = "webcheck-spider"
     handle_httpstatus_list = [404, 500]
 
-    def __init__(self, site, *args, **kwargs):
+    def __init__(self, site, *args, opengraph=False, disqus=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.start_urls = [site]
         self.DOMAIN = site.split("//")[1]
+        self.check_opengraph = opengraph
+        self.check_disqus = disqus
 
     def parse(self, response, **kwargs):
         if response.status in (404, 500):
@@ -55,6 +67,23 @@ class Spider(scrapy.Spider):
             )
 
         if self.DOMAIN in response.url:
+            if self.check_opengraph or self.check_disqus:
+                print(response.xpath("//meta[@property='og:title']"))
+                if not response.xpath("//meta[@property='og:title']"):
+                    self.crawler.stats.inc_value("webcheck_errors")
+                    raise CloseSpider(
+                        f"Cannot find og:title meta tag on {response.url}"
+                    )
+                page_type = response.xpath(
+                    "//meta[@property='og:type']/@content"
+                )[0].extract()
+                if self.check_disqus and page_type == "article":
+                    if not response.css("div#disqus_thread"):
+                        self.crawler.stats.inc_value("webcheck_errors")
+                        raise CloseSpider(
+                            f"Page at {response.url} appears to be og:type=article but does not have Disqus code"
+                        )
+
             for link in response.css("a"):
                 href = link.xpath("@href").extract()
                 text = link.xpath("text()").extract()
