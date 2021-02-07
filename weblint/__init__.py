@@ -26,7 +26,6 @@ class Command(RunSpiderCommand):
         if len(args) != 1:
             raise UsageError("Please pass one website URL as argument")
         site = args[0]
-        print(dict(self.settings))
         crawler = Crawler(Spider)
         self.crawler_process.crawl(
             crawler,
@@ -68,7 +67,6 @@ class Spider(scrapy.Spider):
 
         if self.DOMAIN in response.url:
             if self.check_opengraph or self.check_disqus:
-                print(response.xpath("//meta[@property='og:title']"))
                 if not response.xpath("//meta[@property='og:title']"):
                     self.crawler.stats.inc_value("webcheck_errors")
                     raise CloseSpider(
