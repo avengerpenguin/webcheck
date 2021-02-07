@@ -72,7 +72,7 @@ class Spider(scrapy.Spider):
                 if not response.xpath("//meta[@property='og:title']"):
                     self.crawler.stats.inc_value("webcheck_errors")
                     raise CloseSpider(
-                        f"Cannot find og:title meta tag on {response.url}"
+                        f"Cannot find og:title meta tag on {response.url} (reached from {response.meta['prev_url']})"
                     )
                 page_type = response.xpath(
                     "//meta[@property='og:type']/@content"
