@@ -69,8 +69,9 @@ class Spider(scrapy.Spider):
             if self.check_opengraph or self.check_disqus:
                 if not response.xpath("//meta[@property='og:title']"):
                     self.crawler.stats.inc_value("webcheck_errors")
+                    prev = response.meta.get("prev_url", "first visit")
                     raise CloseSpider(
-                        f"Cannot find og:title meta tag on {response.url} (reached from {response.meta['prev_url']})"
+                        f"Cannot find og:title meta tag on {response.url} (reached from {prev})"
                     )
                 page_type = response.xpath(
                     "//meta[@property='og:type']/@content"
