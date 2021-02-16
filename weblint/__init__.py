@@ -1,8 +1,7 @@
 import scrapy
+from scrapy.commands.runspider import Command as RunSpiderCommand
 from scrapy.crawler import Crawler
 from scrapy.exceptions import CloseSpider, UsageError
-from scrapy.commands.runspider import Command as RunSpiderCommand
-from scrapy.exceptions import UsageError
 
 
 class Command(RunSpiderCommand):
