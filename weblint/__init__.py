@@ -38,7 +38,7 @@ class Command(RunSpiderCommand):
         if self.crawler_process.bootstrap_failed:
             self.exitcode = 1
 
-        exception_count = crawler.stats.get_value("webcheck_errors")
+        exception_count = crawler.stats.get_value("weblint_errors")
         if exception_count:
             print("FAILED: See errors above")
             self.exitcode = 1
@@ -47,7 +47,7 @@ class Command(RunSpiderCommand):
 
 
 class Spider(scrapy.Spider):
-    name = "webcheck-spider"
+    name = "weblint-spider"
     handle_httpstatus_list = [404, 500]
 
     def __init__(self, site, *args, opengraph=False, disqus=False, **kwargs):
@@ -59,7 +59,7 @@ class Spider(scrapy.Spider):
 
     def parse(self, response, **kwargs):
         if response.status in (404, 500):
-            self.crawler.stats.inc_value("webcheck_errors")
+            self.crawler.stats.inc_value("weblint_errors")
             raise CloseSpider(
                 f"Got {response.status} on {response.meta['prev_url']} for {response.url}"
             )
@@ -67,7 +67,7 @@ class Spider(scrapy.Spider):
         if self.DOMAIN in response.url:
             if self.check_opengraph or self.check_disqus:
                 if not response.xpath("//meta[@property='og:title']"):
-                    self.crawler.stats.inc_value("webcheck_errors")
+                    self.crawler.stats.inc_value("weblint_errors")
                     prev = response.meta.get("prev_url", "first visit")
                     raise CloseSpider(
                         f"Cannot find og:title meta tag on {response.url} (reached from {prev})"
@@ -77,7 +77,7 @@ class Spider(scrapy.Spider):
                 )[0].extract()
                 if self.check_disqus and page_type == "article":
                     if not response.css("div#disqus_thread"):
-                        self.crawler.stats.inc_value("webcheck_errors")
+                        self.crawler.stats.inc_value("weblint_errors")
                         raise CloseSpider(
                             f"Page at {response.url} appears to be og:type=article but does not have Disqus code"
                         )
